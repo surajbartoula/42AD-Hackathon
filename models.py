@@ -12,7 +12,7 @@ class Customer(Base):
 	email = Column(String, unique=True, index=True)
 	phone_number = Column(String)
 	date_of_birth = Column(String)
-	created_at = Column(DateTime(timezone=True), default=datetime.timezone.utc)
+	created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 	transactions = relationship("Transaction", back_populates="customer")
 	credit_cards = relationship("CreditCard", back_populates="customer")
 
@@ -30,7 +30,7 @@ class CreditCard(Base):
 	statement_date = Column(String)
 	apr = Column(Float)
 	rewards_rate = Column(Float)
-	created_at = Column(DateTime, default=datetime.timezone.utc)
+	created_at = Column(DateTime, default=datetime.utcnow)
 
 	# Defines a many-to-one relationship: many credit cards belong to one customer.
 	customer = relationship("Customer", back_populates="credit_cards")
@@ -52,7 +52,7 @@ class Transaction(Base):
 	is_anomaly = Column(Boolean, default=False)
 	confidence_score = Column(Float)
 	raw_text = Column(Text)
-	created_at = Column(DateTime, default=datetime.timezone.utc)
+	created_at = Column(DateTime, default=datetime.utcnow)
 
 	customer = relationship("Customer", back_populates="transactions")
 	credit_card = relationship("CreditCard", back_populates="transactions")
@@ -66,7 +66,7 @@ class PaymentReminder(Base):
 	due_date = Column(DateTime)
 	amount = Column(Float)
 	reminder_sent = Column(Boolean, default=False)
-	created_at = Column(DateTime, default=datetime.timezone.utc)
+	created_at = Column(DateTime, default=datetime.utcnow)
 
 class CategoryRule(Base):
 	__tablename__ = "category_rules"
@@ -76,4 +76,4 @@ class CategoryRule(Base):
 	category = Column(String)
 	subcategory = Column(String)
 	confidence = Column(Float)
-	created_at = Column(DateTime, default=datetime.timezone.utc)
+	created_at = Column(DateTime, default=datetime.utcnow)
