@@ -14,8 +14,8 @@ class TransactionExtractor:
                 r'(\d{1,2}\s+\w{3}\s+\d{4})',
             ],
             'amount': [
-                r'\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-                r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:USD|dollars?)',
+                r'(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+                r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:AED|DHS)',
                 r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*CR',
                 r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*DR',
             ],
@@ -109,8 +109,9 @@ class TransactionExtractor:
         description_parts = []
         words = line.split()
         for word in words:
-            if (not re.match(r'^\d+[\/\-]\d+[\/\-]\d+$', word) and 
-                not re.match(r'^\$?\d+[\.,]\d+$', word) and
+            if (not re.match(r'^\d+[\/\-]\d+[\/\-]\d+$', word) and
+                not re.match(r'^(AED|DHS)\s?\d+[\.,]\d+$', word, re.IGNORECASE) and
+                not re.match(r'^\d+[\.,]\d+\s?(AED|DHS)$', word, re.IGNORECASE) and
                 len(word) > 2):
                 description_parts.append(word)
         
@@ -147,13 +148,14 @@ class TransactionExtractor:
     def count_numeric_fields(self, line: str) -> int:
         numeric_patterns = [
             r'\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}',
-            r'\$?\d{1,3}(?:,\d{3})*(?:\.\d{2})?',
+            r'(?:AED|DHS)?\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?',
+            r'\d{1,3}(?:,\d{3})*(?:\.\d{2})?\s*(?:AED|DHS)?',
             r'\d{4}',
         ]
         
         count = 0
         for pattern in numeric_patterns:
-            matches = re.findall(pattern, line)
+            matches = re.findall(pattern, line, re.IGNORECASE)
             count += len(matches)
         
         return count
@@ -183,19 +185,31 @@ class TransactionExtractor:
                 break
         
         for field in fields:
-            amount_match = re.search(r'\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)', field)
-            if amount_match:
-                try:
-                    amount = float(amount_match.group(1).replace(',', ''))
-                    transaction['amount'] = amount
-                    break
-                except ValueError:
-                    continue
+            # Updated to handle AED/DHS patterns
+            amount_patterns = [
+                r'(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+                r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:AED|DHS)',
+                r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            ]
+            
+            for pattern in amount_patterns:
+                amount_match = re.search(pattern, field, re.IGNORECASE)
+                if amount_match:
+                    try:
+                        amount = float(amount_match.group(1).replace(',', ''))
+                        transaction['amount'] = amount
+                        break
+                    except ValueError:
+                        continue
+            
+            if 'amount' in transaction:
+                break
         
         description_fields = []
         for field in fields:
             if (not re.match(r'^\d+[\/\-]\d+[\/\-]\d+$', field) and 
-                not re.match(r'^\$?\d+[\.,]\d+$', field) and
+                not re.match(r'^(AED|DHS)\s?\d+[\.,]\d+$', field, re.IGNORECASE) and
+                not re.match(r'^\d+[\.,]\d+\s?(AED|DHS)$', field, re.IGNORECASE) and
                 len(field) > 2):
                 description_fields.append(field)
         
@@ -239,10 +253,12 @@ class TransactionExtractor:
                 info['card_last_four'] = match.group(1)
                 break
         
+        # Updated balance patterns to handle AED/DHS
         balance_patterns = [
-            r'current\s+balance:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'new\s+balance:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'balance:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'current\s+balance:?\s*(?:AED|DHS)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'new\s+balance:?\s*(?:AED|DHS)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'balance:?\s*(?:AED|DHS)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:current\s+balance|new\s+balance|balance)',
         ]
         
         for pattern in balance_patterns:
@@ -268,10 +284,12 @@ class TransactionExtractor:
                     info['due_date'] = due_date
                     break
         
+        # Updated minimum payment patterns to handle AED/DHS
         minimum_payment_patterns = [
-            r'minimum\s+payment:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'min\s+payment:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'minimum\s+due:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'minimum\s+payment:?\s*(?:AED|DHS)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'min\s+payment:?\s*(?:AED|DHS)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'minimum\s+due:?\s*(?:AED|DHS)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:minimum\s+payment|min\s+payment|minimum\s+due)',
         ]
         
         for pattern in minimum_payment_patterns:

@@ -97,7 +97,7 @@ class AnomalyDetector:
                     'transaction_id': row['id'],
                     'anomaly_type': 'amount_outlier',
                     'score': min(anomaly_score, 1.0),
-                    'description': f'Amount ${amount:.2f} is unusual (typical range: ${q1:.2f} - ${q3:.2f})',
+                    'description': f'Amount AED{amount:.2f} is unusual (typical range: AED{q1:.2f} - AED{q3:.2f})',
                     'transaction': row['original_transaction']
                 })
         
@@ -176,7 +176,7 @@ class AnomalyDetector:
                     'transaction_id': row['id'],
                     'anomaly_type': 'merchant_anomaly',
                     'score': 0.8,
-                    'description': f'First transaction with {merchant} for large amount ${amount:.2f}',
+                    'description': f'First transaction with {merchant} for large amount AED{amount:.2f}',
                     'transaction': row['original_transaction']
                 })
         
@@ -211,7 +211,7 @@ class AnomalyDetector:
                             'transaction_id': row['id'],
                             'anomaly_type': 'category_anomaly',
                             'score': min(z_score / 3, 1.0),
-                            'description': f'Unusual amount ${amount:.2f} for {category} (typical: ${category_info["mean_amount"]:.2f})',
+                            'description': f'Unusual amount AED{amount:.2f} for {category} (typical: AED{category_info["mean_amount"]:.2f})',
                             'transaction': row['original_transaction']
                         })
         
@@ -257,7 +257,7 @@ class AnomalyDetector:
                         'transaction_id': row['id'],
                         'anomaly_type': 'amount_pattern',
                         'score': 0.6,
-                        'description': f'Unusual non-round amount ${amount:.2f} in pattern of round amounts',
+                        'description': f'Unusual non-round amount AED{amount:.2f} in pattern of round amounts',
                         'transaction': row['original_transaction']
                     })
         

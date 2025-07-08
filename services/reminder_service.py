@@ -8,27 +8,49 @@ import re
 class ReminderService:
     def __init__(self):
         self.due_date_patterns = [
-            r'payment\s+due:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
-            r'due\s+date:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
-            r'due\s+on:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
-            r'payment\s+due\s+(\w+\s+\d{1,2},?\s+\d{4})',
-            r'due\s+(\w+\s+\d{1,2},?\s+\d{4})',
-            r'(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\s+due',
+            r'(?:AED|DHS)\s+\d+(?:\.\d{1,2})?\s+payment\s+due:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
+            r'(?:AED|DHS)\s+\d+(?:\.\d{1,2})?\s+due\s+date:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
+            r'(?:AED|DHS)\s+\d+(?:\.\d{1,2})?\s+due\s+on:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
+            r'(?:AED|DHS)\s+\d+(?:\.\d{1,2})?\s+payment\s+due\s+(\w+\s+\d{1,2},?\s+\d{4})',
+            r'(?:AED|DHS)\s+\d+(?:\.\d{1,2})?\s+due\s+(\w+\s+\d{1,2},?\s+\d{4})',
+            r'(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+due\s+for\s+(?:AED|DHS)\s+\d+(?:\.\d{1,2})?',
+            # Added suffix patterns
+            r'\d+(?:\.\d{1,2})?\s+(?:AED|DHS)\s+payment\s+due:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
+            r'\d+(?:\.\d{1,2})?\s+(?:AED|DHS)\s+due\s+date:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
         ]
         
         self.minimum_payment_patterns = [
-            r'minimum\s+payment:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'min\s+payment:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'minimum\s+due:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'amount\s+due:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'minimum\s+payment:?\s*(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'min\s+payment:?\s*(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'minimum\s+due:?\s*(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'amount\s+due:?\s*(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            # Added suffix patterns
+            r'minimum\s+payment:?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:AED|DHS)',
+            r'min\s+payment:?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:AED|DHS)',
+            r'minimum\s+due:?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:AED|DHS)',
+            r'amount\s+due:?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:AED|DHS)',
         ]
         
         self.balance_patterns = [
-            r'current\s+balance:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'new\s+balance:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'balance:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'statement\s+balance:?\s*\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'current\s+balance:?\s*(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'new\s+balance:?\s*(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'balance:?\s*(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'statement\s+balance:?\s*(?:AED|DHS)\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            # Added suffix patterns
+            r'current\s+balance:?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:AED|DHS)',
+            r'new\s+balance:?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:AED|DHS)',
+            r'balance:?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:AED|DHS)',
+            r'statement\s+balance:?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:AED|DHS)',
         ]
+    
+    def extract_currency_code_from_text(self, text: str) -> str:
+        """Extract the currency code (AED or DHS) from text, defaults to AED"""
+        if re.search(r'\bDHS\b', text, re.IGNORECASE):
+            return 'DHS'
+        elif re.search(r'\bAED\b', text, re.IGNORECASE):
+            return 'AED'
+        else:
+            return 'AED'  # Default to AED
     
     def extract_due_date_from_text(self, text: str) -> Optional[datetime]:
         for pattern in self.due_date_patterns:
@@ -64,6 +86,7 @@ class ReminderService:
         due_date = self.extract_due_date_from_text(extracted_text)
         minimum_payment = self.extract_minimum_payment_from_text(extracted_text)
         current_balance = self.extract_balance_from_text(extracted_text)
+        currency_code = self.extract_currency_code_from_text(extracted_text)
         
         if due_date:
             credit_card.due_date = due_date.strftime('%Y-%m-%d')
@@ -73,6 +96,10 @@ class ReminderService:
         
         if current_balance:
             credit_card.current_balance = current_balance
+        
+        # Store currency code if your model supports it
+        if hasattr(credit_card, 'currency_code'):
+            credit_card.currency_code = currency_code
         
         db.commit()
     
@@ -121,6 +148,7 @@ class ReminderService:
                     
                     if today <= due_date <= future_date:
                         days_until_due = (due_date - today).days
+                        currency_code = getattr(card, 'currency_code', 'AED')
                         
                         due_dates.append({
                             'credit_card_id': card.id,
@@ -129,6 +157,7 @@ class ReminderService:
                             'due_date': due_date.isoformat(),
                             'minimum_payment': card.minimum_payment or 0,
                             'current_balance': card.current_balance or 0,
+                            'currency_code': currency_code,
                             'days_until_due': days_until_due,
                             'urgency': self._calculate_urgency(days_until_due)
                         })
@@ -163,6 +192,7 @@ class ReminderService:
                     
                     if due_date < today:
                         days_overdue = (today - due_date).days
+                        currency_code = getattr(card, 'currency_code', 'AED')
                         
                         overdue_payments.append({
                             'credit_card_id': card.id,
@@ -171,24 +201,32 @@ class ReminderService:
                             'due_date': due_date.isoformat(),
                             'minimum_payment': card.minimum_payment or 0,
                             'current_balance': card.current_balance or 0,
+                            'currency_code': currency_code,
                             'days_overdue': days_overdue,
-                            'late_fees_estimated': self._estimate_late_fees(days_overdue, card.minimum_payment or 0)
+                            'late_fees_estimated': self._estimate_late_fees(days_overdue, card.minimum_payment or 0, currency_code)
                         })
                 except ValueError:
                     continue
         
         return sorted(overdue_payments, key=lambda x: x['days_overdue'], reverse=True)
     
-    def _estimate_late_fees(self, days_overdue: int, minimum_payment: float) -> float:
+    def _estimate_late_fees(self, days_overdue: int, minimum_payment: float, currency_code: str = 'AED') -> float:
         if days_overdue <= 0:
             return 0
         
-        base_late_fee = 39.00
-        
-        if minimum_payment < 100:
-            base_late_fee = 29.00
-        elif minimum_payment > 500:
-            base_late_fee = 49.00
+        # Updated to use AED/DHS appropriate amounts
+        if currency_code == 'DHS':
+            base_late_fee = 145.00  # Approximately 39 USD in DHS
+            if minimum_payment < 370:  # ~100 USD
+                base_late_fee = 110.00  # ~29 USD
+            elif minimum_payment > 1850:  # ~500 USD
+                base_late_fee = 180.00  # ~49 USD
+        else:  # AED
+            base_late_fee = 145.00  # Approximately 39 USD in AED
+            if minimum_payment < 370:  # ~100 USD
+                base_late_fee = 110.00  # ~29 USD
+            elif minimum_payment > 1850:  # ~500 USD
+                base_late_fee = 180.00  # ~49 USD
         
         return base_late_fee
     
@@ -197,15 +235,16 @@ class ReminderService:
         bank_name = due_date_info['bank_name']
         minimum_payment = due_date_info['minimum_payment']
         due_date = due_date_info['due_date']
+        currency_code = due_date_info.get('currency_code', 'AED')
         
         if days_until_due == 0:
-            return f"🚨 URGENT: Your {bank_name} credit card payment of ${minimum_payment:.2f} is due TODAY ({due_date})"
+            return f"🚨 URGENT: Your {bank_name} credit card payment of {currency_code} {minimum_payment:.2f} is due TODAY ({due_date})"
         elif days_until_due == 1:
-            return f"⚠️ REMINDER: Your {bank_name} credit card payment of ${minimum_payment:.2f} is due TOMORROW ({due_date})"
+            return f"⚠️ REMINDER: Your {bank_name} credit card payment of {currency_code} {minimum_payment:.2f} is due TOMORROW ({due_date})"
         elif days_until_due <= 3:
-            return f"📅 REMINDER: Your {bank_name} credit card payment of ${minimum_payment:.2f} is due in {days_until_due} days ({due_date})"
+            return f"📅 REMINDER: Your {bank_name} credit card payment of {currency_code} {minimum_payment:.2f} is due in {days_until_due} days ({due_date})"
         else:
-            return f"💳 Upcoming: Your {bank_name} credit card payment of ${minimum_payment:.2f} is due in {days_until_due} days ({due_date})"
+            return f"💳 Upcoming: Your {bank_name} credit card payment of {currency_code} {minimum_payment:.2f} is due in {days_until_due} days ({due_date})"
     
     def mark_reminder_sent(self, reminder_id: int, db: Session):
         reminder = db.query(PaymentReminder).filter(PaymentReminder.id == reminder_id).first()
@@ -248,12 +287,14 @@ class ReminderService:
         minimum_payment = credit_card.minimum_payment or 0
         apr = credit_card.apr or 0.1999
         monthly_rate = apr / 12
+        currency_code = getattr(credit_card, 'currency_code', 'AED')
         
         suggestions = {
             'current_situation': {
                 'balance': current_balance,
                 'minimum_payment': minimum_payment,
-                'apr': apr * 100
+                'apr': apr * 100,
+                'currency_code': currency_code
             },
             'optimization_strategies': []
         }
@@ -265,7 +306,8 @@ class ReminderService:
             suggestions['minimum_payment_scenario'] = {
                 'months_to_payoff': months_minimum,
                 'total_interest': interest_minimum,
-                'total_paid': current_balance + interest_minimum
+                'total_paid': current_balance + interest_minimum,
+                'currency_code': currency_code
             }
         
         optimized_payment = max(minimum_payment * 2, 100)
@@ -277,7 +319,8 @@ class ReminderService:
             'months_to_payoff': months_optimized,
             'total_interest': interest_optimized,
             'total_paid': current_balance + interest_optimized,
-            'interest_saved': interest_minimum - interest_optimized if minimum_payment > 0 else 0
+            'interest_saved': interest_minimum - interest_optimized if minimum_payment > 0 else 0,
+            'currency_code': currency_code
         }
         
         return suggestions
